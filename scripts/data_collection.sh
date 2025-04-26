@@ -1,8 +1,17 @@
-url="https://disk.yandex.com/d/EgOiWzvrh9qLIg"
+#!/bin/bash
 
-wget "$(yadisk-direct $url)" -O data/data.zip
+# Install Kaggle API if not already installed
+pip install kaggle
 
-unzip data/data.zip -d data/
-cp data/toy-data/*.csv data/
-rm -rf data/toy-data
-rm data/data.zip
+# Set up Kaggle API credentials (assuming you have your kaggle.json file ready)
+mkdir -p ~/.kaggle
+cp kaggle.json ~/.kaggle/
+chmod 600 ~/.kaggle/kaggle.json
+
+# Download the dataset
+kaggle datasets download -d thegurusteam/spanish-high-speed-rail-system-ticket-pricing
+
+# Unzip the dataset
+unzip spanish-high-speed-rail-system-ticket-pricing.zip -d data
+
+echo "Dataset downloaded and extracted to data/ directory"

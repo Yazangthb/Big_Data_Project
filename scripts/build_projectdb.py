@@ -26,13 +26,19 @@ with psql.connect(conn_string) as conn:
         conn.commit()
 
         # Read the commands from the file and execute them.
+        # Replace the copy_expert section with:
         with open(os.path.join("sql", "import_data.sql")) as file:
-                # We assume that the COPY commands in the file are ordered (1.depts, 2.emps)
-                commands= file.readlines()
-                with open(os.path.join("data","depts.csv"), "r") as depts:
-                        cur.copy_expert(commands[0], depts)
-                with open(os.path.join("data","emps.csv"), "r") as emps:
-                        cur.copy_expert(commands[1], emps)
+            commands = file.readlines()
+
+            with open(os.path.join("data","depts.csv"), "r") as depts:
+                # Skip header if needed
+                next(depts)
+                cur.copy_expert(commands[0], depts)
+
+            with open(os.path.join("data","emps.csv"), "r") as emps:
+                # Skip header if needed
+                next(emps)
+                cur.copy_expert(commands[1], emps)
 
         # If the sql statements are CRUD then you need to commit the change
         conn.commit()
