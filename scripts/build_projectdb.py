@@ -1,6 +1,7 @@
 import psycopg2 as psql
 from pprint import pprint
 import os
+
 # Read password from secrets file
 password = "hgVwomtl0OIAe7cF"
 
@@ -19,38 +20,11 @@ with psql.connect(conn_string) as conn:
     conn.commit()
 
     # Import data with proper NULL handling
-    with open(os.path.join("sql", "import_data.sql")) as file:
-        commands = file.readlines()
-
-        # Pre-process the CSV file to handle empty values
-        with open(os.path.join("data", "cleaned_tickets.csv"), "r") as data_file:
-            # Read the file and replace empty numeric fields with NULL
-            lines = data_file.readlines()
-            processed_lines = []
-            header = lines[0]
-            processed_lines.append(header)
-            
-            for line in lines[1:]:
-                parts = line.strip().split(',')
-                # Handle empty price field (column 8)
-                if len(parts) > 8 and parts[8] == '""' or parts[8] == '':
-                    parts[8] = 'NULL'
-                processed_lines.append(','.join(parts))
-            
-            # Create a temporary processed file
-            temp_file = os.path.join("data", "processed_dataset.csv")
-            with open(temp_file, "w") as f:
-                f.write('\n'.join(processed_lines))
-            
-            # Import the processed file
-            with open(temp_file, "r") as clean_file:
-                # Skip header
-                next(clean_file)
-                cur.copy_expert(commands[0], clean_file)
-            
-            # Remove temporary file
-            os.remove(temp_file)
-
+    with open(os.path.join("data", "cleaned_tickets.csv"), "r") as f:
+        # Skip header
+        next(f)
+        cur.copy_expert("COPY train_tickets FROM STDIN WITH CSV NULL AS 'NULL'", f)
+    
     conn.commit()
 
     # Test the database

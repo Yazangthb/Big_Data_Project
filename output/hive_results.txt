@@ -1,0 +1,34 @@
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- Drop database if exists
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> DROP DATABASE IF EXISTS team17_projectdb CASCADE;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- Create the database
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> CREATE DATABASE team17_projectdb LOCATION 'project/hive/warehouse';
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- Use the database
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> USE team17_projectdb;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- Create external table for employees
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> CREATE EXTERNAL TABLE TrainTickets 
+. . . . . . . . . . . . . . . . . . . . . . .> STORED AS AVRO 
+. . . . . . . . . . . . . . . . . . . . . . .> LOCATION 'project/warehouse/train_tickets'
+. . . . . . . . . . . . . . . . . . . . . . .> TBLPROPERTIES ('avro.schema.url'='project/warehouse/avsc/train_tickets.avsc');
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- Just to check if tables are working
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SELECT * FROM TrainTickets LIMIT 10;
++------------------+----------------------+---------------------------+-------------------------+-----------------------+------------------------+----------------------------+-----------------------------+---------------------+--------------------+
+| traintickets.id  | traintickets.origin  | traintickets.destination  | traintickets.departure  | traintickets.arrival  | traintickets.duration  | traintickets.vehicle_type  | traintickets.vehicle_class  | traintickets.price  | traintickets.fare  |
++------------------+----------------------+---------------------------+-------------------------+-----------------------+------------------------+----------------------------+-----------------------------+---------------------+--------------------+
+| 4272471          | MADRID               | PONFERRADA                | 1556961600000           | 1556985120000         | 6.53                   | LD-MD                      | Turista con enlace          | 34.35               | Promo +            |
+| 1924163          | VALENCIA             | MADRID                    | 1559023200000           | 1559032380000         | 2.55                   | ALVIA                      | Turista                     | 35.50               | Promo              |
+| 4286491          | MADRID               | BARCELONA                 | 1557980400000           | 1557989400000         | 2.50                   | AVE                        | Turista                     | 78.80               | Promo              |
+| 18499424         | MADRID               | SEVILLA                   | 1583512200000           | 1583521500000         | 2.58                   | AVE                        | Turista                     | 77.10               | Flexible           |
+| 27723437         | MADRID               | VALLADOLID                | 1587358800000           | 1587363360000         | 1.27                   | ALVIA                      | Unknown                     | 37.80               | Standard           |
+| 9078679          | MADRID               | SEVILLA                   | 1560085200000           | 1560094200000         | 2.50                   | AVE                        | Preferente                  | 69.40               | Promo              |
+| 28769007         | VALLADOLID           | MADRID                    | 1589737800000           | 1589742360000         | 1.27                   | ALVIA                      | Unknown                     | 37.80               | Standard           |
+| 7092247          | BARCELONA            | MADRID                    | 1562403600000           | 1562415000000         | 3.17                   | AVE                        | Turista                     | 85.10               | Promo              |
+| 14345660         | SEVILLA              | MADRID                    | 1566999900000           | 1567009020000         | 2.53                   | AVE                        | Turista                     | 47.30               | Promo              |
+| 1994433          | BARCELONA            | MADRID                    | 1556096400000           | 1556107800000         | 3.17                   | AVE                        | Turista                     | 107.70              | Flexible           |
++------------------+----------------------+---------------------------+-------------------------+-----------------------+------------------------+----------------------------+-----------------------------+---------------------+--------------------+
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 

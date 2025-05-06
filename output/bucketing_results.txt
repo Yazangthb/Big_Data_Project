@@ -1,0 +1,62 @@
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> !set silent false;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> !set outputformat table
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- Enable bucketing
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SET hive.enforce.bucketing = true;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SET hive.exec.dynamic.partition = true;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SET hive.exec.dynamic.partition.mode = nonstrict;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- Use your database
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> USE team17_projectdb;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- 1) Create the bucketed external table in your own warehouse area
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> CREATE EXTERNAL TABLE IF NOT EXISTS train_tickets_bucketed (
+. . . . . . . . . . . . . . . . . . . . . . .>   id BIGINT,
+. . . . . . . . . . . . . . . . . . . . . . .>   origin STRING,
+. . . . . . . . . . . . . . . . . . . . . . .>   destination STRING,
+. . . . . . . . . . . . . . . . . . . . . . .>   departure BIGINT,
+. . . . . . . . . . . . . . . . . . . . . . .>   arrival BIGINT,
+. . . . . . . . . . . . . . . . . . . . . . .>   duration DOUBLE,
+. . . . . . . . . . . . . . . . . . . . . . .>   vehicle_type STRING,
+. . . . . . . . . . . . . . . . . . . . . . .>   vehicle_class STRING,
+. . . . . . . . . . . . . . . . . . . . . . .>   price DOUBLE,
+. . . . . . . . . . . . . . . . . . . . . . .>   fare STRING
+. . . . . . . . . . . . . . . . . . . . . . .> )
+. . . . . . . . . . . . . . . . . . . . . . .> CLUSTERED BY (id) INTO 32 BUCKETS
+. . . . . . . . . . . . . . . . . . . . . . .> STORED AS PARQUET
+. . . . . . . . . . . . . . . . . . . . . . .> LOCATION 'project/warehouse/train_tickets_bucketed'
+. . . . . . . . . . . . . . . . . . . . . . .> TBLPROPERTIES ('parquet.compression'='SNAPPY');
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- 2) Populate it
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> INSERT OVERWRITE TABLE train_tickets_bucketed
+. . . . . . . . . . . . . . . . . . . . . . .> SELECT
+. . . . . . . . . . . . . . . . . . . . . . .>   id,
+. . . . . . . . . . . . . . . . . . . . . . .>   origin,
+. . . . . . . . . . . . . . . . . . . . . . .>   destination,
+. . . . . . . . . . . . . . . . . . . . . . .>   departure,
+. . . . . . . . . . . . . . . . . . . . . . .>   arrival,
+. . . . . . . . . . . . . . . . . . . . . . .>   duration,
+. . . . . . . . . . . . . . . . . . . . . . .>   vehicle_type,
+. . . . . . . . . . . . . . . . . . . . . . .>   vehicle_class,
+. . . . . . . . . . . . . . . . . . . . . . .>   price,
+. . . . . . . . . . . . . . . . . . . . . . .>   fare
+. . . . . . . . . . . . . . . . . . . . . . .> FROM TrainTickets;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- 3) Simple test to confirm it's working
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SELECT id, origin, destination FROM train_tickets_bucketed LIMIT 10;
++-----------+-----------+--------------+
+|    id     |  origin   | destination  |
++-----------+-----------+--------------+
+| 26370324  | SEVILLA   | MADRID       |
+| 24377010  | MALAGA    | MADRID       |
+| 19280535  | MADRID    | CORDOBA      |
+| 31432463  | ALICANTE  | MADRID       |
+| 22799338  | SEVILLA   | MADRID       |
+| 36092680  | MADRID    | CORDOBA      |
+| 434748    | MADRID    | BARCELONA    |
+| 12832299  | VALENCIA  | MADRID       |
+| 5778541   | VALENCIA  | MADRID       |
+| 5751      | MADRID    | SEVILLA      |
++-----------+-----------+--------------+
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 

@@ -1,0 +1,67 @@
+{
+  "type" : "record",
+  "name" : "train_tickets",
+  "doc" : "Sqoop import of train_tickets",
+  "fields" : [ {
+    "name" : "id",
+    "type" : [ "null", "int" ],
+    "default" : null,
+    "columnName" : "id",
+    "sqlType" : "4"
+  }, {
+    "name" : "origin",
+    "type" : [ "null", "string" ],
+    "default" : null,
+    "columnName" : "origin",
+    "sqlType" : "12"
+  }, {
+    "name" : "destination",
+    "type" : [ "null", "string" ],
+    "default" : null,
+    "columnName" : "destination",
+    "sqlType" : "12"
+  }, {
+    "name" : "departure",
+    "type" : [ "null", "long" ],
+    "default" : null,
+    "columnName" : "departure",
+    "sqlType" : "93"
+  }, {
+    "name" : "arrival",
+    "type" : [ "null", "long" ],
+    "default" : null,
+    "columnName" : "arrival",
+    "sqlType" : "93"
+  }, {
+    "name" : "duration",
+    "type" : [ "null", "string" ],
+    "default" : null,
+    "columnName" : "duration",
+    "sqlType" : "2"
+  }, {
+    "name" : "vehicle_type",
+    "type" : [ "null", "string" ],
+    "default" : null,
+    "columnName" : "vehicle_type",
+    "sqlType" : "12"
+  }, {
+    "name" : "vehicle_class",
+    "type" : [ "null", "string" ],
+    "default" : null,
+    "columnName" : "vehicle_class",
+    "sqlType" : "12"
+  }, {
+    "name" : "price",
+    "type" : [ "null", "string" ],
+    "default" : null,
+    "columnName" : "price",
+    "sqlType" : "2"
+  }, {
+    "name" : "fare",
+    "type" : [ "null", "string" ],
+    "default" : null,
+    "columnName" : "fare",
+    "sqlType" : "12"
+  } ],
+  "tableName" : "train_tickets"
+}

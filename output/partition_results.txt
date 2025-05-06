@@ -1,0 +1,332 @@
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- Enable dynamic partitioning (nonstrict mode)
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SET hive.exec.dynamic.partition=true;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SET hive.exec.dynamic.partition.mode=nonstrict;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SET hive.exec.max.dynamic.partitions=1000;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SET hive.exec.max.dynamic.partitions.pernode=500;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SET hive.optimize.index.filter=true;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SET hive.optimize.ppd=true;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- Switch to your project database
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> DROP DATABASE IF EXISTS team17_projectdb CASCADE;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> CREATE DATABASE IF NOT EXISTS team17_projectdb LOCATION 'project/hive/warehouse';
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> USE team17_projectdb;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> CREATE EXTERNAL TABLE TrainTickets 
+. . . . . . . . . . . . . . . . . . . . . . .> STORED AS AVRO 
+. . . . . . . . . . . . . . . . . . . . . . .> LOCATION 'project/warehouse/train_tickets'
+. . . . . . . . . . . . . . . . . . . . . . .> TBLPROPERTIES ('avro.schema.url'='project/warehouse/avsc/train_tickets.avsc');
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- 1) Create a partitioned Parquet table for TrainTickets by origin
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> CREATE EXTERNAL TABLE IF NOT EXISTS train_tickets_part (
+. . . . . . . . . . . . . . . . . . . . . . .>   id BIGINT,
+. . . . . . . . . . . . . . . . . . . . . . .>   destination STRING,
+. . . . . . . . . . . . . . . . . . . . . . .>   departure BIGINT,
+. . . . . . . . . . . . . . . . . . . . . . .>   arrival BIGINT,
+. . . . . . . . . . . . . . . . . . . . . . .>   duration DOUBLE,
+. . . . . . . . . . . . . . . . . . . . . . .>   vehicle_type STRING,
+. . . . . . . . . . . . . . . . . . . . . . .>   vehicle_class STRING,
+. . . . . . . . . . . . . . . . . . . . . . .>   price DOUBLE,
+. . . . . . . . . . . . . . . . . . . . . . .>   fare STRING
+. . . . . . . . . . . . . . . . . . . . . . .> )
+. . . . . . . . . . . . . . . . . . . . . . .> PARTITIONED BY (origin STRING)
+. . . . . . . . . . . . . . . . . . . . . . .> STORED AS PARQUET
+. . . . . . . . . . . . . . . . . . . . . . .> LOCATION 'project/warehouse/train_tickets_part'
+. . . . . . . . . . . . . . . . . . . . . . .> TBLPROPERTIES ('parquet.compression'='SNAPPY');
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- 2) Load data dynamically into partitions (one statement handles all origins)
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> INSERT OVERWRITE TABLE train_tickets_part
+. . . . . . . . . . . . . . . . . . . . . . .> PARTITION (origin)
+. . . . . . . . . . . . . . . . . . . . . . .> SELECT
+. . . . . . . . . . . . . . . . . . . . . . .>   id,
+. . . . . . . . . . . . . . . . . . . . . . .>   destination,
+. . . . . . . . . . . . . . . . . . . . . . .>   departure,
+. . . . . . . . . . . . . . . . . . . . . . .>   arrival,
+. . . . . . . . . . . . . . . . . . . . . . .>   duration,
+. . . . . . . . . . . . . . . . . . . . . . .>   vehicle_type,
+. . . . . . . . . . . . . . . . . . . . . . .>   vehicle_class,
+. . . . . . . . . . . . . . . . . . . . . . .>   price,
+. . . . . . . . . . . . . . . . . . . . . . .>   fare,
+. . . . . . . . . . . . . . . . . . . . . . .>   origin
+. . . . . . . . . . . . . . . . . . . . . . .> FROM TrainTickets;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- 3) Verify partitions and sample data
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SHOW PARTITIONS train_tickets_part;
++---------------------+
+|      partition      |
++---------------------+
+| origin=ALBACETE     |
+| origin=ALICANTE     |
+| origin=BARCELONA    |
+| origin=CADIZ        |
+| origin=CASTELLO     |
+| origin=CASTELLON    |
+| origin=CIUDAD REAL  |
+| origin=CORDOBA      |
+| origin=CUENCA       |
+| origin=CÓRDOBA      |
+| origin=GIRONA       |
+| origin=GRANADA      |
+| origin=GUADALAJARA  |
+| origin=HUESCA       |
+| origin=LEON         |
+| origin=LEÓN         |
+| origin=LLEIDA       |
+| origin=MADRID       |
+| origin=MALAGA       |
+| origin=MÁLAGA       |
+| origin=PALENCIA     |
+| origin=PONFERRADA   |
+| origin=SEGOVIA      |
+| origin=SEVILLA      |
+| origin=TARRAGONA    |
+| origin=TOLEDO       |
+| origin=VALENCIA     |
+| origin=VALLADOLID   |
+| origin=ZAMORA       |
+| origin=ZARAGOZA     |
++---------------------+
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SELECT * FROM train_tickets_part WHERE origin='MADRID' LIMIT 10;
++------------------------+---------------------------------+-------------------------------+-----------------------------+------------------------------+----------------------------------+-----------------------------------+---------------------------+--------------------------+----------------------------+
+| train_tickets_part.id  | train_tickets_part.destination  | train_tickets_part.departure  | train_tickets_part.arrival  | train_tickets_part.duration  | train_tickets_part.vehicle_type  | train_tickets_part.vehicle_class  | train_tickets_part.price  | train_tickets_part.fare  | train_tickets_part.origin  |
++------------------------+---------------------------------+-------------------------------+-----------------------------+------------------------------+----------------------------------+-----------------------------------+---------------------------+--------------------------+----------------------------+
+| 26515944               | PONFERRADA                      | 1589380200000                 | 1589394780000               | 4.05                         | ALVIA                            | Turista                           | 31.0                      | Promo +                  | MADRID                     |
+| 27266781               | ZARAGOZA                        | 1584523800000                 | 1584528300000               | 1.25                         | AVE                              | Unknown                           | 55.7                      | Standard                 | MADRID                     |
+| 26020141               | VALLADOLID                      | 1588827120000                 | 1588831020000               | 1.08                         | AVANT                            | Turista                           | 31.1                      | Adulto ida               | MADRID                     |
+| 30156853               | LLEIDA                          | 1592329500000                 | 1592337000000               | 2.08                         | AVE                              | Unknown                           | 74.7                      | Standard                 | MADRID                     |
+| 8500064                | VALENCIA                        | 1559918880000                 | 1559933880000               | 4.17                         | INTERCITY                        | Turista Plus                      | 30.9                      | Promo                    | MADRID                     |
+| 35007203               | ALBACETE                        | 1597386540000                 | 1597397220000               | 2.97                         | MD                               | Turista con enlace                | 23.6                      | Flexible                 | MADRID                     |
+| 5654258                | SEVILLA                         | 1558011600000                 | 1558020600000               | 2.5                          | AVE                              | Turista                           | 76.3                      | Flexible                 | MADRID                     |
+| 53944                  | BARCELONA                       | 1559062800000                 | 1559071800000               | 2.5                          | AVE                              | Turista                           | 88.95                     | Promo                    | MADRID                     |
+| 33068376               | CORDOBA                         | 1590224400000                 | 1590230580000               | 1.72                         | AVE                              | Unknown                           | 63.4                      | Standard                 | MADRID                     |
+| 21103479               | VALLADOLID                      | 1583649600000                 | 1583660100000               | 2.92                         | MD                               | Turista                           | 24.95                     | Adulto ida               | MADRID                     |
++------------------------+---------------------------------+-------------------------------+-----------------------------+------------------------------+----------------------------------+-----------------------------------+---------------------------+--------------------------+----------------------------+
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SELECT origin, COUNT(*) FROM train_tickets_part GROUP BY origin;
++--------------+----------+
+|    origin    |   _c1    |
++--------------+----------+
+| ALBACETE     | 45027    |
+| ALICANTE     | 26961    |
+| BARCELONA    | 344339   |
+| CADIZ        | 1149     |
+| CASTELLO     | 725      |
+| CASTELLON    | 16638    |
+| CIUDAD REAL  | 2545     |
+| CORDOBA      | 108515   |
+| CUENCA       | 1938     |
+| CÓRDOBA      | 6282     |
+| GIRONA       | 30222    |
+| GRANADA      | 11972    |
+| GUADALAJARA  | 1283     |
+| HUESCA       | 558      |
+| LEON         | 24106    |
+| LEÓN         | 2270     |
+| LLEIDA       | 37112    |
+| MADRID       | 1532991  |
+| MALAGA       | 41711    |
+| MÁLAGA       | 2231     |
+| PALENCIA     | 2202     |
+| PONFERRADA   | 67977    |
+| SEGOVIA      | 3609     |
+| SEVILLA      | 283801   |
+| TARRAGONA    | 46318    |
+| TOLEDO       | 1456     |
+| VALENCIA     | 260688   |
+| VALLADOLID   | 93511    |
+| ZAMORA       | 639      |
+| ZARAGOZA     | 101469   |
++--------------+----------+
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- 4) Create a multi-column partitioned Parquet table by vehicle_type and vehicle_class
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> CREATE EXTERNAL TABLE IF NOT EXISTS train_tickets_part2 (
+. . . . . . . . . . . . . . . . . . . . . . .>   id BIGINT,
+. . . . . . . . . . . . . . . . . . . . . . .>   origin STRING,
+. . . . . . . . . . . . . . . . . . . . . . .>   destination STRING,
+. . . . . . . . . . . . . . . . . . . . . . .>   departure BIGINT,
+. . . . . . . . . . . . . . . . . . . . . . .>   arrival BIGINT,
+. . . . . . . . . . . . . . . . . . . . . . .>   duration DOUBLE,
+. . . . . . . . . . . . . . . . . . . . . . .>   price DOUBLE,
+. . . . . . . . . . . . . . . . . . . . . . .>   fare STRING
+. . . . . . . . . . . . . . . . . . . . . . .> )
+. . . . . . . . . . . . . . . . . . . . . . .> PARTITIONED BY (
+. . . . . . . . . . . . . . . . . . . . . . .>   vehicle_type STRING,
+. . . . . . . . . . . . . . . . . . . . . . .>   vehicle_class STRING
+. . . . . . . . . . . . . . . . . . . . . . .> )
+. . . . . . . . . . . . . . . . . . . . . . .> STORED AS PARQUET
+. . . . . . . . . . . . . . . . . . . . . . .> LOCATION 'project/warehouse/train_tickets_part2'
+. . . . . . . . . . . . . . . . . . . . . . .> TBLPROPERTIES ('parquet.compression'='SNAPPY');
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- 5) Load data dynamically for both vehicle_type and vehicle_class
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> INSERT OVERWRITE TABLE train_tickets_part2
+. . . . . . . . . . . . . . . . . . . . . . .> PARTITION (vehicle_type, vehicle_class)
+. . . . . . . . . . . . . . . . . . . . . . .> SELECT
+. . . . . . . . . . . . . . . . . . . . . . .>   id,
+. . . . . . . . . . . . . . . . . . . . . . .>   origin,
+. . . . . . . . . . . . . . . . . . . . . . .>   destination,
+. . . . . . . . . . . . . . . . . . . . . . .>   departure,
+. . . . . . . . . . . . . . . . . . . . . . .>   arrival,
+. . . . . . . . . . . . . . . . . . . . . . .>   duration,
+. . . . . . . . . . . . . . . . . . . . . . .>   price,
+. . . . . . . . . . . . . . . . . . . . . . .>   fare,
+. . . . . . . . . . . . . . . . . . . . . . .>   vehicle_type,
+. . . . . . . . . . . . . . . . . . . . . . .>   vehicle_class
+. . . . . . . . . . . . . . . . . . . . . . .> FROM TrainTickets;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- 6) Verify partitions and sample data
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SHOW PARTITIONS train_tickets_part2;
++----------------------------------------------------+
+|                     partition                      |
++----------------------------------------------------+
+| vehicle_type=ALTARIA/vehicle_class=Preferente      |
+| vehicle_type=ALTARIA/vehicle_class=Turista         |
+| vehicle_type=ALTARIA/vehicle_class=Unknown         |
+| vehicle_type=ALVIA/vehicle_class=Cama G. Clase     |
+| vehicle_type=ALVIA/vehicle_class=Cama Turista      |
+| vehicle_type=ALVIA/vehicle_class=Preferente        |
+| vehicle_type=ALVIA/vehicle_class=PreferenteSólo plaza H |
+| vehicle_type=ALVIA/vehicle_class=Turista           |
+| vehicle_type=ALVIA/vehicle_class=Turista Plus      |
+| vehicle_type=ALVIA/vehicle_class=Turista PlusSólo plaza H |
+| vehicle_type=ALVIA/vehicle_class=Turista con enlace |
+| vehicle_type=ALVIA/vehicle_class=TuristaSólo plaza H |
+| vehicle_type=ALVIA/vehicle_class=Unknown           |
+| vehicle_type=AV City/vehicle_class=Preferente      |
+| vehicle_type=AV City/vehicle_class=Turista         |
+| vehicle_type=AV City/vehicle_class=Turista Plus    |
+| vehicle_type=AV City/vehicle_class=Turista con enlace |
+| vehicle_type=AV City/vehicle_class=TuristaSólo plaza H |
+| vehicle_type=AV City/vehicle_class=Unknown         |
+| vehicle_type=AVANT-AVE/vehicle_class=Turista con enlace |
+| vehicle_type=AVANT-AVE/vehicle_class=Unknown       |
+| vehicle_type=AVANT-LD/vehicle_class=Turista con enlace |
+| vehicle_type=AVANT-LD/vehicle_class=Unknown        |
+| vehicle_type=AVANT-MD/vehicle_class=Turista con enlace |
+| vehicle_type=AVANT-MD/vehicle_class=Unknown        |
+| vehicle_type=AVANT/vehicle_class=Turista           |
+| vehicle_type=AVANT/vehicle_class=Unknown           |
+| vehicle_type=AVE-AVANT/vehicle_class=Turista con enlace |
+| vehicle_type=AVE-AVANT/vehicle_class=Unknown       |
+| vehicle_type=AVE-AVE/vehicle_class=Turista con enlace |
+| vehicle_type=AVE-AVE/vehicle_class=Unknown         |
+| vehicle_type=AVE-LD/vehicle_class=Cama G. Clase    |
+| vehicle_type=AVE-LD/vehicle_class=Cama Turista     |
+| vehicle_type=AVE-LD/vehicle_class=Preferente       |
+| vehicle_type=AVE-LD/vehicle_class=PreferenteSólo plaza H |
+| vehicle_type=AVE-LD/vehicle_class=Turista          |
+| vehicle_type=AVE-LD/vehicle_class=Turista Plus     |
+| vehicle_type=AVE-LD/vehicle_class=Turista con enlace |
+| vehicle_type=AVE-LD/vehicle_class=TuristaSólo plaza H |
+| vehicle_type=AVE-LD/vehicle_class=Unknown          |
+| vehicle_type=AVE-MD/vehicle_class=Cama G. Clase    |
+| vehicle_type=AVE-MD/vehicle_class=Cama Turista     |
+| vehicle_type=AVE-MD/vehicle_class=Preferente       |
+| vehicle_type=AVE-MD/vehicle_class=Turista          |
+| vehicle_type=AVE-MD/vehicle_class=Turista Plus     |
+| vehicle_type=AVE-MD/vehicle_class=Turista Plus - Turista |
+| vehicle_type=AVE-MD/vehicle_class=Turista con enlace |
+| vehicle_type=AVE-MD/vehicle_class=TuristaSólo plaza H |
+| vehicle_type=AVE-MD/vehicle_class=Unknown          |
+| vehicle_type=AVE-TGV/vehicle_class=Preferente      |
+| vehicle_type=AVE-TGV/vehicle_class=Turista         |
+| vehicle_type=AVE-TGV/vehicle_class=Turista Plus    |
+| vehicle_type=AVE-TGV/vehicle_class=TuristaSólo plaza H |
+| vehicle_type=AVE-TGV/vehicle_class=Unknown         |
+| vehicle_type=AVE/vehicle_class=Preferente          |
+| vehicle_type=AVE/vehicle_class=PreferenteSólo plaza H |
+| vehicle_type=AVE/vehicle_class=Turista             |
+| vehicle_type=AVE/vehicle_class=Turista Plus        |
+| vehicle_type=AVE/vehicle_class=Turista con enlace  |
+| vehicle_type=AVE/vehicle_class=TuristaSólo plaza H |
+| vehicle_type=AVE/vehicle_class=Unknown             |
+| vehicle_type=AVLO/vehicle_class=Turista            |
+| vehicle_type=AVLO/vehicle_class=Unknown            |
+| vehicle_type=EUROMED/vehicle_class=Turista         |
+| vehicle_type=EUROMED/vehicle_class=Turista Plus    |
+| vehicle_type=EUROMED/vehicle_class=Unknown         |
+| vehicle_type=INTERCITY/vehicle_class=Preferente    |
+| vehicle_type=INTERCITY/vehicle_class=PreferenteSólo plaza H |
+| vehicle_type=INTERCITY/vehicle_class=Turista       |
+| vehicle_type=INTERCITY/vehicle_class=Turista Plus  |
+| vehicle_type=INTERCITY/vehicle_class=Turista con enlace |
+| vehicle_type=INTERCITY/vehicle_class=TuristaSólo plaza H |
+| vehicle_type=INTERCITY/vehicle_class=Unknown       |
+| vehicle_type=Intercity/vehicle_class=Turista       |
+| vehicle_type=Intercity/vehicle_class=Turista Plus  |
+| vehicle_type=Intercity/vehicle_class=Unknown       |
+| vehicle_type=LD-AVANT/vehicle_class=Turista con enlace |
+| vehicle_type=LD-AVANT/vehicle_class=Unknown        |
+| vehicle_type=LD-AVE/vehicle_class=Preferente       |
+| vehicle_type=LD-AVE/vehicle_class=Turista          |
+| vehicle_type=LD-AVE/vehicle_class=Turista Plus     |
+| vehicle_type=LD-AVE/vehicle_class=Turista con enlace |
+| vehicle_type=LD-AVE/vehicle_class=TuristaSólo plaza H |
+| vehicle_type=LD-AVE/vehicle_class=Unknown          |
+| vehicle_type=LD-MD/vehicle_class=Preferente        |
+| vehicle_type=LD-MD/vehicle_class=Turista           |
+| vehicle_type=LD-MD/vehicle_class=Turista Plus      |
+| vehicle_type=LD-MD/vehicle_class=Turista Plus - Turista |
+| vehicle_type=LD-MD/vehicle_class=Turista con enlace |
+| vehicle_type=LD-MD/vehicle_class=TuristaSólo plaza H |
+| vehicle_type=LD-MD/vehicle_class=Unknown           |
+| vehicle_type=LD/vehicle_class=Preferente           |
+| vehicle_type=LD/vehicle_class=Turista              |
+| vehicle_type=LD/vehicle_class=Turista Plus         |
+| vehicle_type=LD/vehicle_class=Turista con enlace   |
+| vehicle_type=LD/vehicle_class=TuristaSólo plaza H  |
+| vehicle_type=LD/vehicle_class=Unknown              |
+| vehicle_type=MD-AVANT/vehicle_class=Turista con enlace |
+| vehicle_type=MD-AVANT/vehicle_class=Unknown        |
+| vehicle_type=MD-AVE/vehicle_class=Preferente       |
++----------------------------------------------------+
+|                     partition                      |
++----------------------------------------------------+
+| vehicle_type=MD-AVE/vehicle_class=Turista          |
+| vehicle_type=MD-AVE/vehicle_class=Turista - Turista Plus |
+| vehicle_type=MD-AVE/vehicle_class=Turista Plus     |
+| vehicle_type=MD-AVE/vehicle_class=Turista con enlace |
+| vehicle_type=MD-AVE/vehicle_class=TuristaSólo plaza H |
+| vehicle_type=MD-AVE/vehicle_class=Unknown          |
+| vehicle_type=MD-LD/vehicle_class=Preferente        |
+| vehicle_type=MD-LD/vehicle_class=Turista           |
+| vehicle_type=MD-LD/vehicle_class=Turista - Turista Plus |
+| vehicle_type=MD-LD/vehicle_class=Turista PlusSólo plaza H |
+| vehicle_type=MD-LD/vehicle_class=Turista con enlace |
+| vehicle_type=MD-LD/vehicle_class=TuristaSólo plaza H |
+| vehicle_type=MD-LD/vehicle_class=Unknown           |
+| vehicle_type=MD/vehicle_class=Preferente           |
+| vehicle_type=MD/vehicle_class=Turista              |
+| vehicle_type=MD/vehicle_class=Turista con enlace   |
+| vehicle_type=MD/vehicle_class=TuristaSólo plaza H  |
+| vehicle_type=MD/vehicle_class=Unknown              |
+| vehicle_type=R. EXPRES/vehicle_class=Turista       |
+| vehicle_type=REG.EXP./vehicle_class=Turista        |
+| vehicle_type=REG.EXP./vehicle_class=Unknown        |
+| vehicle_type=REGIONAL/vehicle_class=Preferente     |
+| vehicle_type=REGIONAL/vehicle_class=Turista        |
+| vehicle_type=REGIONAL/vehicle_class=TuristaSólo plaza H |
+| vehicle_type=REGIONAL/vehicle_class=Unknown        |
+| vehicle_type=TORRE ORO/vehicle_class=Turista       |
+| vehicle_type=TORRE ORO/vehicle_class=Turista Plus  |
+| vehicle_type=TORRE ORO/vehicle_class=Unknown       |
+| vehicle_type=TRENHOTEL/vehicle_class=Cama G. Clase |
+| vehicle_type=TRENHOTEL/vehicle_class=Cama Turista  |
+| vehicle_type=TRENHOTEL/vehicle_class=Turista       |
+| vehicle_type=TRENHOTEL/vehicle_class=Turista con enlace |
+| vehicle_type=TRENHOTEL/vehicle_class=TuristaSólo plaza H |
+| vehicle_type=TRENHOTEL/vehicle_class=Unknown       |
++----------------------------------------------------+
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SELECT * FROM train_tickets_part2 WHERE vehicle_type='AVE' AND vehicle_class='Turista' LIMIT 10;
++-------------------------+-----------------------------+----------------------------------+--------------------------------+------------------------------+-------------------------------+----------------------------+---------------------------+-----------------------------------+------------------------------------+
+| train_tickets_part2.id  | train_tickets_part2.origin  | train_tickets_part2.destination  | train_tickets_part2.departure  | train_tickets_part2.arrival  | train_tickets_part2.duration  | train_tickets_part2.price  | train_tickets_part2.fare  | train_tickets_part2.vehicle_type  | train_tickets_part2.vehicle_class  |
++-------------------------+-----------------------------+----------------------------------+--------------------------------+------------------------------+-------------------------------+----------------------------+---------------------------+-----------------------------------+------------------------------------+
+| 22912762                | ZARAGOZA                    | MADRID                           | 1585330860000                  | 1585335600000                | 1.32                          | 55.7                       | Flexible                  | AVE                               | Turista                            |
+| 15697301                | SEVILLA                     | MADRID                           | 1576251900000                  | 1576261020000                | 2.53                          | 47.3                       | Promo                     | AVE                               | Turista                            |
+| 5654258                 | MADRID                      | SEVILLA                          | 1558011600000                  | 1558020600000                | 2.5                           | 76.3                       | Flexible                  | AVE                               | Turista                            |
+| 53944                   | MADRID                      | BARCELONA                        | 1559062800000                  | 1559071800000                | 2.5                           | 88.95                      | Promo                     | AVE                               | Turista                            |
+| 24449885                | LLEIDA                      | MADRID                           | 1583773080000                  | 1583780400000                | 2.03                          | 74.7                       | Flexible                  | AVE                               | Turista                            |
+| 19376873                | ZARAGOZA                    | MADRID                           | 1584520980000                  | 1584526200000                | 1.45                          | 55.7                       | Flexible                  | AVE                               | Turista                            |
+| 36332040                | TARRAGONA                   | MADRID                           | 1599449940000                  | 1599459600000                | 2.68                          | 48.75                      | YOVOY                     | AVE                               | Turista                            |
+| 11746445                | VALENCIA                    | MADRID                           | 1563961200000                  | 1563967200000                | 1.67                          | 33.65                      | Promo                     | AVE                               | Turista                            |
+| 1829733                 | VALENCIA                    | MADRID                           | 1557663000000                  | 1557669780000                | 1.88                          | 51.15                      | Promo                     | AVE                               | Turista                            |
+| 16111137                | SEVILLA                     | MADRID                           | 1584092400000                  | 1584102180000                | 2.72                          | 47.8                       | Promo                     | AVE                               | Turista                            |
++-------------------------+-----------------------------+----------------------------------+--------------------------------+------------------------------+-------------------------------+----------------------------+---------------------------+-----------------------------------+------------------------------------+
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 

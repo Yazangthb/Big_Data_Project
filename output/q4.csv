@@ -1,0 +1,16 @@
++---------------------------+---------------------+
+|       vehicle_class       |      avg_price      |
++---------------------------+---------------------+
+| Cama G. Clase             | 110.67090909090905  |
+| TuristaSólo plaza H       | 82.8413532232289    |
+| PreferenteSólo plaza H    | 78.977481949459     |
+| Turista Plus              | 77.58996150781277   |
+| Preferente                | 74.5418233612072    |
+| Turista PlusSólo plaza H  | 71.35               |
+| Cama Turista              | 70.01295097132295   |
+| Unknown                   | 58.57609173430793   |
+| Turista                   | 56.281373890005625  |
+| Turista - Turista Plus    | 50.931521739130446  |
+| Turista con enlace        | 50.316176589440296  |
+| Turista Plus - Turista    | 42.18142076502735   |
++---------------------------+---------------------+
