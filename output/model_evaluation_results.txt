@@ -1,0 +1,26 @@
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> USE team17_projectdb;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> DROP TABLE IF EXISTS model_evaluation;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> CREATE EXTERNAL TABLE model_evaluation (
+. . . . . . . . . . . . . . . . . . . . . . .>   model STRING,
+. . . . . . . . . . . . . . . . . . . . . . .>   metric STRING,
+. . . . . . . . . . . . . . . . . . . . . . .>   value DOUBLE
+. . . . . . . . . . . . . . . . . . . . . . .> )
+. . . . . . . . . . . . . . . . . . . . . . .> ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+. . . . . . . . . . . . . . . . . . . . . . .> STORED AS TEXTFILE
+. . . . . . . . . . . . . . . . . . . . . . .> LOCATION 'project/output/evaluation'
+. . . . . . . . . . . . . . . . . . . . . . .> TBLPROPERTIES (
+. . . . . . . . . . . . . . . . . . . . . . .>   "skip.header.line.count"="1"
+. . . . . . . . . . . . . . . . . . . . . . .> );
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SELECT * FROM model_evaluation;
++-------------------------+--------------------------+-------------------------+
+| model_evaluation.model  | model_evaluation.metric  | model_evaluation.value  |
++-------------------------+--------------------------+-------------------------+
+| model1                  | RMSE                     | 9.918135741057814       |
+| model2                  | RMSE                     | 9.795493786515081       |
+| model3                  | RMSE                     | 9.214153098924786       |
++-------------------------+--------------------------+-------------------------+
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 

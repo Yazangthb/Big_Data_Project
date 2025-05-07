@@ -11,7 +11,7 @@ LOCATION 'project/hive/warehouse/q3';
 
 INSERT OVERWRITE TABLE q3_results
 SELECT fare, COUNT(*) AS count
-FROM traintickets
+FROM train_tickets_part
 GROUP BY fare
 ORDER BY count DESC;
 

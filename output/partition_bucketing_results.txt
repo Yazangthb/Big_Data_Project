@@ -1,0 +1,149 @@
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- Enable dynamic partitioning (nonstrict mode) and bucketing enforcement
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SET hive.exec.dynamic.partition=true;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SET hive.exec.dynamic.partition.mode=nonstrict;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SET hive.exec.max.dynamic.partitions=1000;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SET hive.exec.max.dynamic.partitions.pernode=500;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SET hive.optimize.index.filter=true;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SET hive.optimize.ppd=true;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- Enforce bucketing for INSERT statements
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SET hive.enforce.bucketing=true;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- Switch to your project database
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> DROP DATABASE IF EXISTS team17_projectdb CASCADE;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> CREATE DATABASE IF NOT EXISTS team17_projectdb LOCATION 'project/hive/warehouse';
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> USE team17_projectdb;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- Original AVRO table
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> CREATE EXTERNAL TABLE TrainTickets 
+. . . . . . . . . . . . . . . . . . . . . . .> STORED AS AVRO 
+. . . . . . . . . . . . . . . . . . . . . . .> LOCATION 'project/warehouse/train_tickets'
+. . . . . . . . . . . . . . . . . . . . . . .> TBLPROPERTIES ('avro.schema.url'='project/warehouse/avsc/train_tickets.avsc');
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- 1) Create a partitioned & bucketed Parquet table for TrainTickets by origin, bucketed by destination
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> CREATE EXTERNAL TABLE IF NOT EXISTS train_tickets_part (
+. . . . . . . . . . . . . . . . . . . . . . .>   id BIGINT,
+. . . . . . . . . . . . . . . . . . . . . . .>   destination STRING,
+. . . . . . . . . . . . . . . . . . . . . . .>   departure BIGINT,
+. . . . . . . . . . . . . . . . . . . . . . .>   arrival BIGINT,
+. . . . . . . . . . . . . . . . . . . . . . .>   duration DOUBLE,
+. . . . . . . . . . . . . . . . . . . . . . .>   vehicle_type STRING,
+. . . . . . . . . . . . . . . . . . . . . . .>   vehicle_class STRING,
+. . . . . . . . . . . . . . . . . . . . . . .>   price DOUBLE,
+. . . . . . . . . . . . . . . . . . . . . . .>   fare STRING
+. . . . . . . . . . . . . . . . . . . . . . .> )
+. . . . . . . . . . . . . . . . . . . . . . .> PARTITIONED BY (origin STRING)
+. . . . . . . . . . . . . . . . . . . . . . .> CLUSTERED BY (ID) INTO 32 BUCKETS
+. . . . . . . . . . . . . . . . . . . . . . .> STORED AS PARQUET
+. . . . . . . . . . . . . . . . . . . . . . .> LOCATION 'project/warehouse/train_tickets_part'
+. . . . . . . . . . . . . . . . . . . . . . .> TBLPROPERTIES (
+. . . . . . . . . . . . . . . . . . . . . . .>   'parquet.compression'='SNAPPY',
+. . . . . . . . . . . . . . . . . . . . . . .>   'bucketed'='true'
+. . . . . . . . . . . . . . . . . . . . . . .> );
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- 2) Load data dynamically into partitions (one statement handles all origins) with bucketing
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> INSERT OVERWRITE TABLE train_tickets_part
+. . . . . . . . . . . . . . . . . . . . . . .> PARTITION (origin)
+. . . . . . . . . . . . . . . . . . . . . . .> SELECT
+. . . . . . . . . . . . . . . . . . . . . . .>   id,
+. . . . . . . . . . . . . . . . . . . . . . .>   destination,
+. . . . . . . . . . . . . . . . . . . . . . .>   departure,
+. . . . . . . . . . . . . . . . . . . . . . .>   arrival,
+. . . . . . . . . . . . . . . . . . . . . . .>   duration,
+. . . . . . . . . . . . . . . . . . . . . . .>   vehicle_type,
+. . . . . . . . . . . . . . . . . . . . . . .>   vehicle_class,
+. . . . . . . . . . . . . . . . . . . . . . .>   price,
+. . . . . . . . . . . . . . . . . . . . . . .>   fare,
+. . . . . . . . . . . . . . . . . . . . . . .>   origin
+. . . . . . . . . . . . . . . . . . . . . . .> FROM TrainTickets;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- 3) Verify partitions, buckets and sample data
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SHOW PARTITIONS train_tickets_part;
++---------------------+
+|      partition      |
++---------------------+
+| origin=ALBACETE     |
+| origin=ALICANTE     |
+| origin=BARCELONA    |
+| origin=CADIZ        |
+| origin=CASTELLO     |
+| origin=CASTELLON    |
+| origin=CIUDAD REAL  |
+| origin=CORDOBA      |
+| origin=CUENCA       |
+| origin=CÓRDOBA      |
+| origin=GIRONA       |
+| origin=GRANADA      |
+| origin=GUADALAJARA  |
+| origin=HUESCA       |
+| origin=LEON         |
+| origin=LEÓN         |
+| origin=LLEIDA       |
+| origin=MADRID       |
+| origin=MALAGA       |
+| origin=MÁLAGA       |
+| origin=PALENCIA     |
+| origin=PONFERRADA   |
+| origin=SEGOVIA      |
+| origin=SEVILLA      |
+| origin=TARRAGONA    |
+| origin=TOLEDO       |
+| origin=VALENCIA     |
+| origin=VALLADOLID   |
+| origin=ZAMORA       |
+| origin=ZARAGOZA     |
++---------------------+
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> -- You can also look at the underlying file layout to see buckets under each origin folder
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SELECT * FROM train_tickets_part WHERE origin='MADRID' LIMIT 10;
++------------------------+---------------------------------+-------------------------------+-----------------------------+------------------------------+----------------------------------+-----------------------------------+---------------------------+--------------------------+----------------------------+
+| train_tickets_part.id  | train_tickets_part.destination  | train_tickets_part.departure  | train_tickets_part.arrival  | train_tickets_part.duration  | train_tickets_part.vehicle_type  | train_tickets_part.vehicle_class  | train_tickets_part.price  | train_tickets_part.fare  | train_tickets_part.origin  |
++------------------------+---------------------------------+-------------------------------+-----------------------------+------------------------------+----------------------------------+-----------------------------------+---------------------------+--------------------------+----------------------------+
+| 25764188               | BARCELONA                       | 1588009500000                 | 1588020900000               | 3.17                         | AVE                              | Turista                           | 46.85                     | Promo +                  | MADRID                     |
+| 2012296                | BARCELONA                       | 1558930500000                 | 1558964220000               | 9.37                         | R. EXPRES                        | Turista                           | 43.25                     | Adulto ida               | MADRID                     |
+| 16453728               | VALENCIA                        | 1584632400000                 | 1584638400000               | 1.67                         | AVE                              | Preferente                        | 67.3                      | Promo                    | MADRID                     |
+| 12322382               | SEVILLA                         | 1564578000000                 | 1564587000000               | 2.5                          | AVE                              | Preferente                        | 53.5                      | Promo                    | MADRID                     |
+| 7631643                | VALENCIA                        | 1563374400000                 | 1563380400000               | 1.67                         | AVE                              | Turista                           | 57.75                     | Promo                    | MADRID                     |
+| 2719353                | VALENCIA                        | 1558456800000                 | 1558463340000               | 1.82                         | AVE                              | Turista                           | 39.45                     | Promo                    | MADRID                     |
+| 6265097                | VALENCIA                        | 1560251400000                 | 1560258180000               | 1.88                         | AVE                              | Turista                           | 27.8                      | Promo                    | MADRID                     |
+| 337560                 | SEVILLA                         | 1557310200000                 | 1557337860000               | 7.68                         | MD-LD                            | Turista                           | 34.35                     | Promo                    | MADRID                     |
+| 33773746               | VALLADOLID                      | 1587278100000                 | 1587281880000               | 1.05                         | AV City                          | Unknown                           | 37.8                      | Standard                 | MADRID                     |
+| 16850596               | SEVILLA                         | 1585995000000                 | 1586021160000               | 7.27                         | MD-LD                            | Turista con enlace                | 34.35                     | Promo +                  | MADRID                     |
++------------------------+---------------------------------+-------------------------------+-----------------------------+------------------------------+----------------------------------+-----------------------------------+---------------------------+--------------------------+----------------------------+
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> SELECT origin, COUNT(*) FROM train_tickets_part GROUP BY origin;
++--------------+----------+
+|    origin    |   _c1    |
++--------------+----------+
+| ALBACETE     | 45027    |
+| ALICANTE     | 26961    |
+| BARCELONA    | 344339   |
+| CADIZ        | 1149     |
+| CASTELLO     | 725      |
+| CASTELLON    | 16638    |
+| CIUDAD REAL  | 2545     |
+| CORDOBA      | 108515   |
+| CUENCA       | 1938     |
+| CÓRDOBA      | 6282     |
+| GIRONA       | 30222    |
+| GRANADA      | 11972    |
+| GUADALAJARA  | 1283     |
+| HUESCA       | 558      |
+| LEON         | 24106    |
+| LEÓN         | 2270     |
+| LLEIDA       | 37112    |
+| MADRID       | 1532991  |
+| MALAGA       | 41711    |
+| MÁLAGA       | 2231     |
+| PALENCIA     | 2202     |
+| PONFERRADA   | 67977    |
+| SEGOVIA      | 3609     |
+| SEVILLA      | 283801   |
+| TARRAGONA    | 46318    |
+| TOLEDO       | 1456     |
+| VALENCIA     | 260688   |
+| VALLADOLID   | 93511    |
+| ZAMORA       | 639      |
+| ZARAGOZA     | 101469   |
++--------------+----------+
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 

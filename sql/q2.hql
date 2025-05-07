@@ -13,7 +13,7 @@ INSERT OVERWRITE TABLE q2_results
 SELECT
   FROM_UNIXTIME(CAST(departure / 1000 AS BIGINT), 'yyyy-MM-dd') AS `date`,
   AVG(price) AS avg_price
-FROM traintickets
+FROM train_tickets_part
 GROUP BY FROM_UNIXTIME(CAST(departure / 1000 AS BIGINT), 'yyyy-MM-dd')
 ORDER BY `date`;
 

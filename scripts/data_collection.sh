@@ -5,15 +5,15 @@
 
 # Download the dataset
 curl -L -u yazanalnakri:92aedf09a13e123a22205dedfc0f2305\
-  -o trains-yazan.zip\
-  https://www.kaggle.com/api/v1/datasets/download/yazanalnakri/trains-yazan
+  -o sampled-trains-yazan.zip\
+  https://www.kaggle.com/api/v1/datasets/download/yazanalnakri/sampled-trains-yazan
 
 # Check if the download was successful
 if [ $? -eq 0 ]; then
     echo "Download successful. Unzipping the file..."
     
     # Unzip the file
-    unzip trains-yazan.zip -d trains-yazan
+    unzip sampled-trains-yazan.zip -d sampled-trains-yazan
     
     # Check if unzip was successful
     if [ $? -eq 0 ]; then
@@ -23,8 +23,8 @@ if [ $? -eq 0 ]; then
         mkdir -p data
         
         # Move the specific file to the data directory
-        if [ -f "trains-yazan/half_sampled_dataset.csv" ]; then
-            mv trains-yazan/half_sampled_dataset.csv data/half_sampled_dataset.csv
+        if [ -f "trains-yazan/sampled_dataset.csv" ]; then
+            mv sampled-trains-yazan/sampled_dataset.csv data/half_sampled_dataset.csv
             echo "File moved to data/half_sampled_dataset.csv"
             
             # Optional: Remove the trains-yazan directory after moving the file

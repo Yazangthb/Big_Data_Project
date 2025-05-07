@@ -1,0 +1,24 @@
+USE team17_projectdb;
+
+DROP TABLE IF EXISTS q12_results;
+CREATE EXTERNAL TABLE q12_results (
+  month STRING,
+  ticket_count BIGINT
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+LOCATION 'project/hive/warehouse/q12';
+
+INSERT OVERWRITE TABLE q12_results
+SELECT
+  FROM_UNIXTIME(CAST(departure / 1000 AS BIGINT), 'MM') AS month,
+  COUNT(*) AS ticket_count
+FROM train_tickets_part
+GROUP BY FROM_UNIXTIME(CAST(departure / 1000 AS BIGINT), 'MM')
+ORDER BY month;
+
+SELECT * FROM q12_results;
+
+INSERT OVERWRITE DIRECTORY 'project/output/q12'
+ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
+SELECT * FROM q12_results;

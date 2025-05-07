@@ -10,7 +10,7 @@ LOCATION 'project/hive/warehouse/q5';
 
 INSERT OVERWRITE TABLE q5_results
 SELECT SUM(price) AS total_revenue
-FROM traintickets;
+FROM train_tickets_part;
 
 SELECT * FROM q5_results;
 

@@ -11,7 +11,7 @@ LOCATION 'project/hive/warehouse/q4';
 
 INSERT OVERWRITE TABLE q4_results
 SELECT vehicle_class, AVG(price) AS avg_price
-FROM traintickets
+FROM train_tickets_part
 GROUP BY vehicle_class
 ORDER BY avg_price DESC;
 

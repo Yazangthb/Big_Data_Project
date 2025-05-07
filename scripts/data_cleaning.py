@@ -71,7 +71,7 @@ def clean_dataset(input_path, output_path, chunksize=10000):
     """
     # Get total rows for progress bar (approximate)
     total_rows = sum(1 for _ in open(input_path)) - 1  # Subtract header
-    
+    print(total_rows)
     # Step 1: Compute group medians for price imputation
     group_medians = compute_medians(input_path)
     
@@ -151,6 +151,6 @@ def clean_dataset(input_path, output_path, chunksize=10000):
     print(f"Final file size: {os.path.getsize(output_path)/1024/1024:.2f} MB")
 
 if __name__ == "__main__":
-    input_csv = "data/sampled_dataset.csv"
+    input_csv = "data/half_sampled_dataset.csv"
     output_csv = "data/cleaned_tickets.csv"
     clean_dataset(input_csv, output_csv)
