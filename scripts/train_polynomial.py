@@ -78,4 +78,4 @@ def trainPoly(spark,train_df,test_df):
          .save(f"hdfs:///user/team17/project/output/model2_metrics"))
 
         print(f"Linear Regression (Standard) RMSE: {rmse:.4f}, R²: {r2:.4f}")
-
+     

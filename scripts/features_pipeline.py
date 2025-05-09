@@ -4,13 +4,79 @@ from pyspark.sql.types import TimestampType
 from pyspark.ml.feature import (StringIndexer, OneHotEncoder, 
                                VectorAssembler, StandardScaler,
                                PolynomialExpansion)
+from pyspark import keyword_only
+from pyspark.ml.util import DefaultParamsReadable, DefaultParamsWritable
+from pyspark.ml import Transformer
+from pyspark.sql.functions import from_unixtime, year
+from pyspark.ml.param.shared import HasInputCol, HasOutputCols, Param, Params, TypeConverters
 from pyspark.ml import Pipeline
+import math
+class CyclicalEncoder(Transformer, HasInputCol, HasOutputCols, DefaultParamsReadable, DefaultParamsWritable):
+    """
+    Custom transformer to encode cyclical features using sine/cosine transformation
+    """
+    @keyword_only
+    def __init__(self, inputCol=None, outputCols=None, cycle_length=None):
+        super(CyclicalEncoder, self).__init__()
+        self.cycle_length = Param(self, "cycle_length", "Length of the cycle")
+        self._setDefault(cycle_length=None, outputCols=None)
+        kwargs = self._input_kwargs
+        self.setParams(**kwargs)
+    
+    @keyword_only
+    def setParams(self, inputCol=None, outputCols=None, cycle_length=None):
+        kwargs = self._input_kwargs
+        return self._set(**kwargs)
+    
+    def getCycleLength(self):
+        return self.getOrDefault(self.cycle_length)
+    
+    def _transform(self, df):
+        input_col = self.getInputCol()
+        output_cols = self.getOutputCols() or [f"{input_col}_sin", f"{input_col}_cos"]
+        cycle_length = self.getCycleLength()
+        
+        if cycle_length is None:
+            raise ValueError("cycle_length must be specified")
+        
+        return (df
+                .withColumn(output_cols[0], F.sin(2 * math.pi * F.col(input_col) / cycle_length))
+                .withColumn(output_cols[1], F.cos(2 * math.pi * F.col(input_col) / cycle_length))
+               )
+
+class TimeDecomposer(Transformer, HasInputCol, HasOutputCols, DefaultParamsReadable, DefaultParamsWritable):
+    """
+    Custom transformer to decompose a timestamp into its components
+    """
+    @keyword_only
+    def __init__(self, inputCol=None, outputCols=None):
+        super(TimeDecomposer, self).__init__()
+        kwargs = self._input_kwargs
+        self.setParams(**kwargs)
+    
+    @keyword_only
+    def setParams(self, inputCol=None, outputCols=None):
+        kwargs = self._input_kwargs
+        return self._set(**kwargs)
+    
+    def _transform(self, df):
+        input_col = self.getInputCol()
+        output_cols = self.getOutputCols()
+        
+        return (df
+                .withColumn(output_cols[0], F.year(input_col))      # year
+                .withColumn(output_cols[1], F.month(input_col))     # month
+                .withColumn(output_cols[2], F.dayofmonth(input_col)) # day
+                .withColumn(output_cols[3], F.hour(input_col))      # hour
+                .withColumn(output_cols[4], F.minute(input_col))    # minute
+                .withColumn(output_cols[5], F.second(input_col))    # second
+               )
 
 class DataCreator :
     def __init__(self,spark , categoricalCols=None , numericalCols=None):
         self.spark=spark
         self.categoricalCols = categoricalCols if categoricalCols else  ['origin', 'destination', 'vehicle_type', 'vehicle_class' , 'fare']
-        self.numericalCols =  numericalCols if numericalCols else ['trip_hours', 'departure_hour', 'departure_day_of_week']
+        self.numericalCols =  numericalCols if numericalCols else ['trip_hours' ]
         self.tickets=None
         self.data_filtering()
         self.full_pipeline= self.create_pipeline()
@@ -25,47 +91,62 @@ class DataCreator :
         # Convert UNIX timestamps to human-readable timestamps
         tickets = self.spark.read.format("avro").table('team17_projectdb.train_tickets_part')
         tickets = tickets.withColumn("departure_time", F.from_unixtime(F.col("departure")/1000).cast(TimestampType()))
-        tickets = tickets.withColumn("arrival_time", F.from_unixtime(F.col("arrival")/1000).cast(TimestampType()))
+        # tickets = tickets.withColumn("arrival_time", F.from_unixtime(F.col("arrival")/1000).cast(TimestampType()))
 
         # Extract useful time features
-        tickets = tickets.withColumn("departure_hour", F.hour("departure_time"))
+       
+        # tickets = tickets.withColumn("departure_hour", F.hour("departure_time"))
         tickets = tickets.withColumn("departure_day_of_week", F.dayofweek("departure_time"))
-        tickets = tickets.withColumn("is_weekend", F.when(F.dayofweek("departure_time").isin([1,7]), 1).otherwise(0))
+        # tickets = tickets.withColumn("is_weekend", F.when(F.dayofweek("departure_time").isin([1,7]), 1).otherwise(0))
         tickets = tickets.withColumn("trip_hours", F.col("duration"))
-
-        # Define features and label
+    
+        
         features = [
-            'origin', 'destination', 
+            'origin', 'destination', 'departure' , 
             'trip_hours', 'vehicle_type', 'vehicle_class',
-            'departure_hour', 'departure_day_of_week',  'fare'
+            'fare'
         ]
         label = 'price'
-
-        # Clean data
-        self.tickets = tickets.select(features + [label]).na.drop()
+         # Clean data
+        self.tickets = tickets.na.drop()
+        
     def create_pipeline(self):
+        departure_time_decomposer = TimeDecomposer(inputCol="departure_time", 
+                                          outputCols=["dep_year", "dep_month", "dep_day", 
+                                                     "dep_hour", "dep_min", "dep_sec"])
         indexers = [StringIndexer(inputCol=c, outputCol=f"{c}_index", handleInvalid="keep") 
             for c in self.categoricalCols]
 
         # 2. Create different pipeline branches
         # --- Branch 1: Simple (indexers + numerical) ---
-        simple_assembler = VectorAssembler(
-            inputCols=[f"{c}_index" for c in self.categoricalCols] + self.numericalCols,
-            outputCol="features_simple"
-        )
+        month_encoder = CyclicalEncoder(inputCol="dep_month", outputCols=["month_sin", "month_cos"], cycle_length=12)
+        day_encoder = CyclicalEncoder(inputCol="dep_day", outputCols=["day_sin", "day_cos"], cycle_length=31)  
+        hour_encoder = CyclicalEncoder(inputCol="dep_hour", outputCols=["hour_sin", "hour_cos"], cycle_length=24)
+        minute_encoder = CyclicalEncoder(inputCol="dep_min", outputCols=["min_sin", "min_cos"], cycle_length=60)
+        second_encoder = CyclicalEncoder(inputCol="dep_sec", outputCols=["sec_sin", "sec_cos"], cycle_length=60)
+        day_of_week_encoder = CyclicalEncoder(inputCol="departure_day_of_week", outputCols=["dow_sin", "dow_cos"], cycle_length=7)
+        numericalCols = self.numericalCols + ["dep_year"] + \
+            ["month_sin", "month_cos", "day_sin", "day_cos", 
+             "hour_sin", "hour_cos", "min_sin", "min_cos", 
+             "sec_sin", "sec_cos", "dow_sin", "dow_cos"]
+
+        
 
         # --- Branch 2: Standard (indexers + one-hot + scaled numerical) ---
         encoders = [OneHotEncoder(inputCol=f"{c}_index", outputCol=f"{c}_encoded") 
                    for c in self.categoricalCols]
-
+        
         numerical_assembler = VectorAssembler(inputCols=self.numericalCols, outputCol="numerical_features")
         scaler = StandardScaler(inputCol="numerical_features", outputCol="scaled_numerical")
-
+        simple_assembler = VectorAssembler(
+            inputCols=[f"{c}_index" for c in self.categoricalCols] + ["scaled_numerical"],
+            outputCol="features_simple"
+        )
         standard_assembler = VectorAssembler(
             inputCols=[f"{c}_encoded" for c in self.categoricalCols] + ["scaled_numerical"],
             outputCol="features_standard"
         )
-
+        
         # --- Branch 3: Polynomial (standard + polynomial expansion) ---
         poly_expansion = PolynomialExpansion(degree=2, inputCol="scaled_numerical", outputCol="poly_features")
         poly_assembler = VectorAssembler(
@@ -75,10 +156,18 @@ class DataCreator :
 
         # 3. Final unified pipeline
         full_pipeline = Pipeline(stages=indexers + [
-            simple_assembler,
+            departure_time_decomposer,
+            month_encoder,
+            day_encoder,
+            hour_encoder,
+            minute_encoder,
+            second_encoder,
+            day_of_week_encoder,
+            
             *encoders,
             numerical_assembler,
             scaler,
+            simple_assembler,
             standard_assembler,
             poly_expansion,
             poly_assembler

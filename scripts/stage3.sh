@@ -9,8 +9,8 @@ export PYSPARK_DRIVER_PYTHON=python3
 # Run the pipeline
 spark-submit \
   --master yarn \
-  --num-executors 2 \
-  --executor-memory 2G \
+  --num-executors 1 \
+  --executor-memory 1G \
   load_data.py
 
 # Check status
@@ -20,3 +20,4 @@ else
     echo "Pipeline failed" >&2
     exit 1
 fi
+

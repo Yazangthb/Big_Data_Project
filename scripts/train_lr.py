@@ -34,8 +34,9 @@ def trainLr(spark,train_df,test_df):
     cv_model_lr_standard = cv_lr_standard.fit(train_df)
     best_model_lr_standard = cv_model_lr_standard.bestModel
     # Save best model
+    
     best_model_lr_standard.write().overwrite().save(f"hdfs:///user/team17/project/models/model1")
-
+    
     # Predict and save results
     predictions_lr_standard = best_model_lr_standard.transform(test_df)
     (predictions_lr_standard.select("price", "prediction")
@@ -75,4 +76,4 @@ def trainLr(spark,train_df,test_df):
      .save(f"hdfs:///user/team17/project/output/model1_metrics"))
 
     print(f"Linear Regression (Standard) RMSE: {rmse:.4f}, R²: {r2:.4f}")
-
+  
