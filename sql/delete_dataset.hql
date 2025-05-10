@@ -1,0 +1,1 @@
+DROP DATABASE IF EXISTS team17_projectdb CASCADE;

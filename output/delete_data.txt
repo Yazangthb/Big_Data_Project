@@ -1,0 +1,4 @@
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> DROP DATABASE IF EXISTS team17_projectdb CASCADE;
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> 
+0: jdbc:hive2://hadoop-03.uni.innopolis.ru:10> echo
+. . . . . . . . . . . . . . . . . . . . . . .> 

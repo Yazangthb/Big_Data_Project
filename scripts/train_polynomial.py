@@ -78,4 +78,27 @@ def trainPoly(spark,train_df,test_df):
          .save(f"hdfs:///user/team17/project/output/model2_metrics"))
 
         print(f"Linear Regression (Standard) RMSE: {rmse:.4f}, R²: {r2:.4f}")
-     
+        
+       
+        best_params = {
+            "elasticNetParam": float(best_model_lr_poly._java_obj.getElasticNetParam()),
+            "regParam": float(best_model_lr_poly._java_obj.getRegParam())
+        }
+        params_rows = [Row(parameter=k, value=v) for k, v in best_params.items()]
+
+        # Define schema
+        params_schema = StructType([
+            StructField("parameter", StringType(), True),
+            StructField("value", DoubleType(), True)
+        ])
+
+        # Create DataFrame
+        params_df = spark.createDataFrame(params_rows, schema=params_schema)
+        params_output_path = "hdfs:///user/team17/project/output/model2_best_params"
+
+        (params_df.coalesce(1)  # Ensure single output file
+         .write.mode("overwrite")
+         .format("csv")
+         .option("header", "true")
+         .save(params_output_path))
+

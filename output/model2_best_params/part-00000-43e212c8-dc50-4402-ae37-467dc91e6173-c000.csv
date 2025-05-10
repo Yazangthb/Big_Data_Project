@@ -1,0 +1,3 @@
+parameter,value
+elasticNetParam,0.0
+regParam,0.01

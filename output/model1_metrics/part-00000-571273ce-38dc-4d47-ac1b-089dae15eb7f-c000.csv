@@ -1,0 +1,3 @@
+model,metric,value
+model1,RMSE,9.935109745508981
+model1,R2,0.825580168589796

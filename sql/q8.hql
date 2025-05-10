@@ -20,13 +20,18 @@ ROW FORMAT DELIMITED
 FIELDS TERMINATED BY ','
 LOCATION 'project/hive/warehouse/sample';
 
--- Insert first 100 rows into the sample table
+-- Insert first 10 rows into the sample table with corrected column order
 INSERT OVERWRITE TABLE dataset_sample
-SELECT *
+SELECT
+  id,
+  origin,
+  destination,
+  departure,
+  arrival,
+  duration,
+  vehicle_type,
+  vehicle_class,
+  price,
+  fare
 FROM train_tickets_part
 LIMIT 10;
-
--- Optional: export the sample as CSV for Superset
-INSERT OVERWRITE DIRECTORY 'project/output/sample'
-ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-SELECT * FROM dataset_sample;
